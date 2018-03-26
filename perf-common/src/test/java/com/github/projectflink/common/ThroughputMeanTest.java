@@ -4,19 +4,19 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class WeightedMeanTest {
+public class ThroughputMeanTest {
 	public static final double EPSILON = 0.001;
 
 	@Test
 	public void testMean() {
-		WeightedMean mean = new WeightedMean();
+		ThroughputMean mean = new ThroughputMean();
 		// reports being generated every 10 records
 		// two reporters, one with throughput 30 records/second ...
-		mean.addValue(30, 10.0/30);
-		mean.addValue(30, 10.0/30);
-		mean.addValue(30, 10.0/30);
+		mean.addMeassurement(10, 1.0 / 3);
+		mean.addMeassurement(10, 1.0 / 3);
+		mean.addMeassurement(10, 1.0 / 3);
 		// ... another 10 records/second
-		mean.addValue(10, 10.0/10);
+		mean.addMeassurement(10, 1.0);
 
 		assertEquals(20, mean.getMean(), EPSILON);
 		assertEquals(4, mean.getN());

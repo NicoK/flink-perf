@@ -28,15 +28,15 @@ public class AnalyzeTool {
 	public static class Result {
 
 		DescriptiveStatistics latencies;
-		WeightedMean throughputs;
+		ThroughputMean throughputs;
 		Map<String, DescriptiveStatistics> perHostLatancies;
-		Map<String, WeightedMean> perHostThroughputs;
+		Map<String, ThroughputMean> perHostThroughputs;
 
 		public Result(
 				DescriptiveStatistics latencies,
-				WeightedMean throughputs,
+				ThroughputMean throughputs,
 				Map<String, DescriptiveStatistics> perHostLatancies,
-				Map<String, WeightedMean> perHostThroughputs) {
+				Map<String, ThroughputMean> perHostThroughputs) {
 			this.latencies = latencies;
 			this.throughputs = throughputs;
 			this.perHostLatancies = perHostLatancies;
@@ -61,10 +61,10 @@ public class AnalyzeTool {
 		Pattern stormHostPattern = Pattern.compile(".*Client environment:host.name=([^.]+).*");
 
 		DescriptiveStatistics latencies = new DescriptiveStatistics();
-		WeightedMean throughputs = new WeightedMean();
+		ThroughputMean throughputs = new ThroughputMean();
 		String currentHost = null;
 		Map<String, DescriptiveStatistics> perHostLat = new HashMap<>();
-		Map<String, WeightedMean> perHostThr = new HashMap<>();
+		Map<String, ThroughputMean> perHostThr = new HashMap<>();
 		HostDetectionMode hostDetectionModeMode = HostDetectionMode.UNKNOWN;
 
 		while ((l = br.readLine()) != null) {
@@ -90,17 +90,18 @@ public class AnalyzeTool {
 				long elements = Long.valueOf(tpMatcher.group(1));
 				double throughput = Double.valueOf(tpMatcher.group(2));
 				// since throughputs are being reported one per N records (and not once per time interval), faster tasks
-				// will report more throughputs with higher values skewing the average. To fix that, we are weighting
-				// the averages.
-				double weight = elements / throughput;
-				throughputs.addValue(throughput, weight);
+				// will report more throughputs with higher values skewing the average. To fix that, we are decomposing
+				// measured throughput into number of elements and time, and we recalculate average after aggregating
+				// all measurements
+				double time = elements / throughput;
+				throughputs.addMeassurement(elements, time);
 
-				WeightedMean perHost = perHostThr.get(currentHost);
+				ThroughputMean perHost = perHostThr.get(currentHost);
 				if(perHost == null) {
-					perHost = new WeightedMean();
+					perHost = new ThroughputMean();
 					perHostThr.put(currentHost, perHost);
 				}
-				perHost.addValue(throughput, weight);
+				perHost.addMeassurement(elements, time);
 				continue;
 			}
 
@@ -132,7 +133,7 @@ public class AnalyzeTool {
 	public static void main(String[] args) throws IOException {
 		Result r1 = analyze(args[0]);
 		DescriptiveStatistics latencies = r1.latencies;
-		WeightedMean throughputs = r1.throughputs;
+		ThroughputMean throughputs = r1.throughputs;
 		// System.out.println("lat-mean;lat-median;lat-90percentile;lat-95percentile;lat-99percentile;throughput-mean;throughput-max;latencies;throughputs;");
 		System.out.println("all-machines;" + latencies.getMean() + ";" + latencies.getPercentile(50) + ";" + latencies.getPercentile(90) + ";" + latencies.getPercentile(95) + ";" + latencies.getPercentile(99)+ ";" + throughputs.getMean() + ";" + throughputs.getMax() + ";" + latencies.getN() + ";" + throughputs.getN());
 
@@ -147,7 +148,7 @@ public class AnalyzeTool {
 		}
 
 		System.err.println("================= Throughput ("+r1.perHostThroughputs.size()+" reports ) =====================");
-		for(Map.Entry<String, WeightedMean> entry : r1.perHostThroughputs.entrySet()) {
+		for(Map.Entry<String, ThroughputMean> entry : r1.perHostThroughputs.entrySet()) {
 			System.err.println("====== "+entry.getKey()+" (entries: "+entry.getValue().getN()+")=======");
 			System.err.println("Mean throughput " + entry.getValue().getMean());
 		}
