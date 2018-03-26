@@ -64,7 +64,7 @@ public class AnalyzeTool {
 		ThroughputMean throughputs = new ThroughputMean();
 		String currentHost = null;
 		Map<String, DescriptiveStatistics> perHostLat = new HashMap<>();
-		Map<String, ThroughputMean> perHostThr = new HashMap<>();
+		Map<String, ThroughputMean> perHostThroughputs = new HashMap<>();
 		HostDetectionMode hostDetectionModeMode = HostDetectionMode.UNKNOWN;
 
 		while ((l = br.readLine()) != null) {
@@ -89,17 +89,17 @@ public class AnalyzeTool {
 			if(tpMatcher.matches()) {
 				long elements = Long.valueOf(tpMatcher.group(1));
 				double throughput = Double.valueOf(tpMatcher.group(2));
-				// since throughputs are being reported one per N records (and not once per time interval), faster tasks
+				// since throughputs are being reported once per N records (and not once per time interval), faster tasks
 				// will report more throughputs with higher values skewing the average. To fix that, we are decomposing
 				// measured throughput into number of elements and time, and we recalculate average after aggregating
 				// all measurements
 				double time = elements / throughput;
 				throughputs.addMeassurement(elements, time);
 
-				ThroughputMean perHost = perHostThr.get(currentHost);
+				ThroughputMean perHost = perHostThroughputs.get(currentHost);
 				if(perHost == null) {
 					perHost = new ThroughputMean();
-					perHostThr.put(currentHost, perHost);
+					perHostThroughputs.put(currentHost, perHost);
 				}
 				perHost.addMeassurement(elements, time);
 				continue;
@@ -127,7 +127,7 @@ public class AnalyzeTool {
 			}
 		}
 
-		return new Result(latencies, throughputs, perHostLat, perHostThr);
+		return new Result(latencies, throughputs, perHostLat, perHostThroughputs);
 	}
 
 	public static void main(String[] args) throws IOException {
