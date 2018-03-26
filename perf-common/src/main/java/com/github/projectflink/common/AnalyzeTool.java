@@ -33,7 +33,7 @@ public class AnalyzeTool {
 		}
 	}
 
-	public static Result analyze(String file, List<String> toIgnore) throws IOException {
+	public static Result analyze(String file) throws IOException {
 
 		final InputStream is;
 		if (file.endsWith(".gz")) {
@@ -67,8 +67,6 @@ public class AnalyzeTool {
 				currentHost = stormHostMatcher.group(1);
 				System.err.println("Setting host to "+currentHost+ " (storm)");
 			}
-
-			if(toIgnore != null && toIgnore.contains(currentHost)) continue;
 
 			// ---------- latency ---------------
 			Matcher latencyMatcher = latencyPattern.matcher(l);
@@ -104,7 +102,7 @@ public class AnalyzeTool {
 	}
 
 	public static void main(String[] args) throws IOException {
-		Result r1 = analyze(args[0], null);
+		Result r1 = analyze(args[0]);
 		DescriptiveStatistics latencies = r1.latencies;
 		SummaryStatistics throughputs = r1.throughputs;
 		// System.out.println("lat-mean;lat-median;lat-90percentile;lat-95percentile;lat-99percentile;throughput-mean;throughput-max;latencies;throughputs;");
